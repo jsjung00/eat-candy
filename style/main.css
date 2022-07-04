@@ -1,0 +1,26 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: #e8bfbf;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: "Poppins", "Roboto", "Helvetica", "Arial", sans-serif;
+}
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+.canvas-wrapper {
+  border: 1px solid black;
+  opacity: 1;
+  transition: opacity 0.5s;
+  /*overflow: hidden;*/
+}
+.canvas-child {
+  position: absolute;
+}
