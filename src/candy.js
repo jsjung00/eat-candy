@@ -85,10 +85,11 @@ class Candies {
     this.candies.push(candy);
   }
   removeCandy(candy) {
+    console.log("before", this.candies);
     this.candies = this.candies.filter((item) => item.id != candy.id);
+    console.log("after", this.candies);
   }
   drawCandies() {
-    console.log(this.candies);
     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
     for (const candy of this.candies) {
       candy.draw();
@@ -101,7 +102,7 @@ class Candies {
   }
   missedCandy() {
     this.missedCandyCount = this.missedCandyCount + 1;
-    console.log(`Missed Candy Count: ${this.missedCandyCount}`);
+    //console.log(`Missed Candy Count: ${this.missedCandyCount}`);
   }
 }
 
@@ -131,6 +132,10 @@ class Candy extends Candies {
       //move candy down screen
       this.y = this.y + this.gravity * 1;
     }
+  }
+  swallowed() {
+    console.log("swallowed- explosion", this.candies);
+    this.removeCandy(this);
   }
 }
 

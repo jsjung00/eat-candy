@@ -10,4 +10,4 @@ const getPrediction = async (video) => {
   return predictions;
 };
 
-export { initializeModel, getPrediction };
+export { initializeModel, getPrediction, Candies };
