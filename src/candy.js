@@ -16,17 +16,8 @@ class Candies {
     canvas.height = videoHeight;
     this.canvas = canvas;
     this.ctx = this.canvas.getContext("2d");
-  }
-  async initCanvas() {
-    const video = document.querySelector("#videoElement");
-    const videoWidth = video.videoWidth;
-    const videoHeight = video.videoHeight;
-    this.canvasWidth = videoWidth;
-    this.canvasHeight = videoHeight;
-    this.canvas = document.querySelector("#background");
-    this.ctx = this.canvas.getContext("2d");
-    this.canvas.width = canvasWidth;
-    this.canvas.height = canvasHeight;
+    this.ctx.shadowColor = "white";
+    this.ctx.shadowBlur = 5;
   }
   async init() {
     await this.initCandies();
@@ -72,20 +63,36 @@ class Candies {
       255
     )},${this.randomBtw(0, 255)})`;
   }
+  //simply creates candy without adding to the candy list
   createCandy() {
-    const gravity = this.getRandomFloat(0.5, 1.0, 1);
+    const gravity = this.getRandomFloat(1, 2.5, 1);
     const size = this.randomBtw(10, 20);
-    const xStart = this.randomBtw(size, this.canvasWidth - size);
-    const yStart = this.randomBtw(size, this.canvasHeight / 2 - size);
+    const xStart = this.randomBtw(
+      Math.floor(this.canvasWidth / 5) + size,
+      this.canvasWidth - size - Math.floor(this.canvasWidth / 5)
+    );
+    const yStart = this.randomBtw(size, this.canvasHeight / 3 - size);
     const rgb = this.randomRGB();
     const candy = new Candy(xStart, yStart, size, rgb, gravity);
     return candy;
   }
+  //creates candy and adds to candy list
+  addNewCandy() {
+    const newCandy = this.createCandy();
+    this.candies.push(newCandy);
+  }
+  //note: should be private. Candy class does not access to this.candies
   addCandy(candy) {
     this.candies.push(candy);
   }
+  //note: should be private. Candy class does not have access to this.candies
   removeCandy(candy) {
-    console.log("before", this.candies);
+    console.log("remove Candy input", candy);
+    console.log("this candies", this.candies);
+    console.log(
+      "filtered, ",
+      this.candies.filter((item) => item.id != candy.id)
+    );
     this.candies = this.candies.filter((item) => item.id != candy.id);
     console.log("after", this.candies);
   }
@@ -97,12 +104,16 @@ class Candies {
   }
   updateAll() {
     for (const candy of this.candies) {
-      candy.update();
+      const didMiss = candy.update();
+      if (didMiss) {
+        this.missedCandy();
+        this.removeCandy(candy);
+      }
     }
   }
   missedCandy() {
     this.missedCandyCount = this.missedCandyCount + 1;
-    //console.log(`Missed Candy Count: ${this.missedCandyCount}`);
+    console.log(`Missed Candy Count: ${this.missedCandyCount}`);
   }
 }
 
@@ -115,6 +126,8 @@ class Candy extends Candies {
     this.size = size;
     this.color = color;
     this.id = uuidv4();
+    this.isSwallowed = false;
+    this.swallowAnimationDone = false;
   }
   draw() {
     //clear previous location
@@ -123,19 +136,19 @@ class Candy extends Candies {
     this.ctx.arc(this.x, this.y, this.size, 0, 2 * Math.PI);
     this.ctx.fill();
   }
+  //returns boolean if candy touchs the floor
   update() {
     //missed candy
     if (this.y - this.size > this.canvasHeight) {
-      super.missedCandy();
-      super.removeCandy(this);
+      return true;
     } else {
       //move candy down screen
       this.y = this.y + this.gravity * 1;
+      return false;
     }
   }
   swallowed() {
-    console.log("swallowed- explosion", this.candies);
-    this.removeCandy(this);
+    this.isSwallowed = true;
   }
 }
 

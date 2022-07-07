@@ -5,120 +5,49 @@ import "@tensorflow/tfjs-core";
 import "@tensorflow/tfjs-backend-webgl";
 import "@mediapipe/face_mesh";
 import { drawResults } from "./utilities";
-import {
-  initBackground,
-  initCanvas,
-  Candies,
-  Candy,
-  makeCandies,
-} from "./candy";
-
-let video, model, detector, canvas, context;
-const setupCamera = async () => {
-  video = document.querySelector("#videoElement");
-  //video = document.createElement("video");
-  //video.id = "videoElement";
-  const stream = await navigator.mediaDevices.getUserMedia({
-    audio: false,
-    video: { facingMode: "user", width: 640, height: 640 },
-  });
-  video.srcObject = stream;
-  return new Promise((resolve) => {
-    video.onloadedmetadata = (event) => {
-      resolve(video);
-    };
-  });
-};
-
-const setupCanvas = async () => {
-  const canvasContainer = document.querySelector(".canvas-wrapper");
-  const videoWidth = video.videoWidth;
-  const videoHeight = video.videoHeight;
-  canvasContainer.style = `width: ${videoWidth}px; height: ${videoHeight}px`;
-  canvas = document.getElementById("output");
-  canvas.width = videoWidth;
-  canvas.height = videoHeight;
-  context = canvas.getContext("2d");
-};
-
-const initDetector = async () => {
-  await tf.setBackend(state.backend);
-  console.log(tf.getBackend());
-  const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
-  //const detectorConfig = { runtime: "tfjs" };
-  const detectorConfig = {
-    runtime: "mediapipe",
-    maxFaces: 1,
-    solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
-  };
-  detector = await faceLandmarksDetection.createDetector(model, detectorConfig);
-};
-
-const initialize = async () => {
-  console.log("loading camera");
-  await setupCamera();
-  video.play();
-  video.width = video.videoWidth;
-  video.height = video.videoHeight;
-  await setupCanvas();
-  console.log("loading facemesh");
-  await initDetector();
-  renderFace();
-};
-
-const getFaces = async () => {
-  const faces = await detector.estimateFaces(video, { flipHorizontal: true });
-  return faces;
-};
-
-const drawFace = async (mouthOnly = true) => {
-  const faces = await getFaces();
-  //clear canvas
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  if (faces != null && faces.length != 0) {
-    drawResults(context, faces[0], mouthOnly);
-  }
-};
-
-const renderFace = async () => {
-  await drawFace(true);
-  rafId = requestAnimationFrame(renderFace);
-};
-
-class Game {
-  constructor(state) {
-    this.candies;
+import { makeCandies } from "./candy";
+import { isSwallowed } from "./swallow";
+class Main {
+  constructor(state, detectorConfig) {
+    this.candiesObj;
     this.video;
     this.outputCanvas;
     this.outputContext;
     this.state = state;
+    this.detector;
+    this.detectorConfig = detectorConfig;
+    this.score = 0;
+    this.INIT_LIVES = 3;
+    this.lives = this.INIT_LIVES;
+    this.MIN_CANDY_NUM = 5;
   }
-  async init() {
+  async initFace() {
     console.log("loading camera");
     await this.setupCamera();
     this.video.play();
     this.video.width = this.video.videoWidth;
     this.video.height = this.video.videoHeight;
-    await this.setupCanvas();
+    await this.setupOutputCanvas();
     console.log("loading facemesh");
-    await initDetector();
-    renderFace();
+    await this.initDetector();
   }
   async setupCamera() {
-    this.video = document.querySelector("#videoElement");
+    const video = document.querySelector("#videoElement");
+    console.log("video", video);
     const stream = await navigator.mediaDevices.getUserMedia({
       audio: false,
       video: { facingMode: "user", width: 640, height: 640 },
     });
-    this.video.srcObject = stream;
+    video.srcObject = stream;
+    this.video = video;
     return new Promise((resolve) => {
-      video.onloadedmetadata = (event) => {
-        resolve(video);
+      this.video.onloadedmetadata = (event) => {
+        resolve(this.video);
       };
     });
   }
 
-  async setupCanvas() {
+  async setupOutputCanvas() {
     const canvasContainer = document.querySelector(".canvas-wrapper");
     const videoWidth = this.video.videoWidth;
     const videoHeight = this.video.videoHeight;
@@ -126,40 +55,110 @@ class Game {
     const outputCanvas = document.getElementById("output");
     outputCanvas.width = videoWidth;
     outputCanvas.height = videoHeight;
-    this.context = outputCanvas.getContext("2d");
+    this.outputContext = outputCanvas.getContext("2d");
     this.outputCanvas = outputCanvas;
   }
   async initDetector() {
-    await tf.setBackend(state.backend);
+    await tf.setBackend(this.state.backend);
     console.log(tf.getBackend());
     const model = faceLandmarksDetection.SupportedModels.MediaPipeFaceMesh;
-    //const detectorConfig = { runtime: "tfjs" };
-    const detectorConfig = {
-      runtime: "mediapipe",
-      maxFaces: 1,
-      solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
-    };
-    detector = await faceLandmarksDetection.createDetector(
+    const detector = await faceLandmarksDetection.createDetector(
       model,
-      detectorConfig
+      this.detectorConfig
     );
+    this.detector = detector;
   }
 
-  async run() {
-    await initialize();
-    const candies = await makeCandies();
-    const loop = () => {
-      candies.drawCandies();
-      candies.updateAll();
+  renderFace() {
+    const loop = async () => {
+      await this.drawFace(true);
       requestAnimationFrame(loop);
     };
     loop();
   }
+
+  async getFaces() {
+    const faces = await this.detector.estimateFaces(this.video, {
+      flipHorizontal: true,
+    });
+    return faces;
+  }
+
+  async drawFace(mouthOnly = true) {
+    const faces = await this.getFaces();
+    //clear canvas
+    this.outputContext.clearRect(
+      0,
+      0,
+      this.outputCanvas.width,
+      this.outputCanvas.height
+    );
+    if (faces != null && faces.length != 0) {
+      drawResults(this.outputContext, faces[0], mouthOnly);
+      this.swallowUpdate(faces[0]);
+    }
+  }
+  swallowUpdate(face) {
+    for (const candy of this.candiesObj.candies) {
+      if (isSwallowed(face, candy)) {
+        this.addScore();
+        candy.swallowed();
+        this.candiesObj.removeCandy(candy);
+        console.log("after removal", this.candiesObj);
+      }
+    }
+  }
+  async run() {
+    this.initText();
+    await this.initFace();
+    const candies = await makeCandies();
+    this.candiesObj = candies;
+    this.renderFace();
+    const loop = () => {
+      this.candiesObj.drawCandies();
+      this.candiesObj.updateAll();
+      this.updateLives(this.candiesObj.missedCandyCount);
+      let candyRafId = requestAnimationFrame(loop);
+      //create a new candy every 200 seconds
+      if (candyRafId > 0 && candyRafId % 200 == 0) {
+        this.candiesObj.addNewCandy();
+      }
+      //make sure there is at least MIN_NUM_CANDY on the screen
+      while (this.candiesObj.candies.length < this.MIN_CANDY_NUM) {
+        this.candiesObj.addNewCandy();
+      }
+    };
+    loop();
+  }
+  //Game logic
+  addScore() {
+    this.score += 1;
+    const scoreText = document.getElementById("score");
+    scoreText.innerText = `${this.score}`;
+  }
+  updateLives(totalMissed) {
+    console.log(totalMissed);
+    if (totalMissed && totalMissed > 0) {
+      this.lives = this.INIT_LIVES - totalMissed;
+      const livesText = document.getElementById("lives");
+      livesText.innerText = `Lives: ${this.lives}`;
+    }
+  }
+  initText() {
+    const scoreText = document.getElementById("score");
+    scoreText.innerText = `${this.score}`;
+    const livesText = document.getElementById("lives");
+    livesText.innerText = `Lives: ${this.lives}`;
+  }
 }
 
 window.onload = async () => {
-  await initialize();
   const state = { backend: "webgl" };
-  let game = new Game(state);
+  const detectorConfig = {
+    runtime: "mediapipe",
+    maxFaces: 1,
+    solutionPath: "https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh",
+  };
+  let game = new Main(state, detectorConfig);
   game.run();
 };

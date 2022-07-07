@@ -6,7 +6,12 @@
 <body>
   <div class="container">
     <div class="canvas-wrapper">
+      <div class="canvas-child top-bar" style="z-index: 4">
+        <div id="score"></div>
+        <div id="lives"></div>
+      </div>
       <canvas id="output" class="canvas-child" style="z-index: 2"></canvas>
+      <canvas id="background" class="canvas-child" style="z-index: 3"></canvas>
       <video
         playsinline
         id="videoElement"
@@ -22,3 +27,4 @@
   </div>
 </body>
 <script type="module" src="src/main.js"></script>
+<script type="module" src="src/candy.js"></script>
