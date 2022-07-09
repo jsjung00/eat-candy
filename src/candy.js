@@ -174,4 +174,4 @@ const makeCandies = async () => {
   return candies;
 };
 
-export { initCanvas, Candies, Candy, makeCandies };
+export { Candies, Candy, makeCandies };
