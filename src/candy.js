@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { v4 as uuidv4 } from "../node_modules/uuid";
 import {
   NUM_INIT_CANDIES,
   NON_SELECTED_SHADOW,

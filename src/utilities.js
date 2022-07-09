@@ -1,4 +1,3 @@
-import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
 import { TRIANGULATION } from "./triangulation";
 import { lipsLowerOuter, lipsUpperOuter, GREEN } from "./params";
 

@@ -1,8 +1,8 @@
 import "../node_modules/@mediapipe/face_mesh";
-import * as tf from "@tensorflow/tfjs";
-import * as faceLandmarksDetection from "@tensorflow-models/face-landmarks-detection";
-import "@tensorflow/tfjs-core";
-import "@tensorflow/tfjs-backend-webgl";
+import * as tf from "../node_modules/@tensorflow/tfjs";
+import * as faceLandmarksDetection from "../node_modules/@tensorflow-models/face-landmarks-detection";
+import "../node_modules/@tensorflow/tfjs-core";
+import "../node_modules/@tensorflow/tfjs-backend-webgl";
 import { drawResults } from "./utilities";
 import { makeCandies } from "./candy";
 import { isSwallowed } from "./swallow";
