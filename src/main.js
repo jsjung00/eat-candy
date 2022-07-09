@@ -7,6 +7,7 @@ import "@mediapipe/face_mesh";
 import { drawResults } from "./utilities";
 import { makeCandies } from "./candy";
 import { isSwallowed } from "./swallow";
+import { MIN_CANDY_NUM } from "./params";
 class Main {
   constructor(state, detectorConfig) {
     this.candiesObj;
@@ -19,7 +20,8 @@ class Main {
     this.score = 0;
     this.INIT_LIVES = 3;
     this.lives = this.INIT_LIVES;
-    this.MIN_CANDY_NUM = 5;
+    this.MIN_CANDY_NUM = MIN_CANDY_NUM;
+    this.faceTimer = 0; //ms once loop starts for renderFace
   }
   async initFace() {
     console.log("loading camera");
@@ -72,7 +74,8 @@ class Main {
   renderFace() {
     const loop = async () => {
       await this.drawFace(true);
-      requestAnimationFrame(loop);
+      const faceLoopDuration = requestAnimationFrame(loop);
+      this.faceTimer = faceLoopDuration;
     };
     loop();
   }
@@ -100,11 +103,10 @@ class Main {
   }
   swallowUpdate(face) {
     for (const candy of this.candiesObj.candies) {
-      if (isSwallowed(face, candy)) {
+      if (isSwallowed(face, candy, this.faceTimer)) {
         this.addScore();
         candy.swallowed();
         this.candiesObj.removeCandy(candy);
-        console.log("after removal", this.candiesObj);
       }
     }
   }
@@ -115,6 +117,7 @@ class Main {
     this.candiesObj = candies;
     this.renderFace();
     const loop = () => {
+      console.log("candies", this.candiesObj);
       this.candiesObj.drawCandies();
       this.candiesObj.updateAll();
       this.updateLives(this.candiesObj.missedCandyCount);
@@ -132,6 +135,7 @@ class Main {
   }
   //Game logic
   addScore() {
+    this.candiesObj.score += 1;
     this.score += 1;
     const scoreText = document.getElementById("score");
     scoreText.innerText = `${this.score}`;

@@ -48,6 +48,9 @@ body {
   font-size: 60px;
   font-weight: 500;
 }
+#ratio {
+  font-size: 30px;
+}
 #lives {
   font-size: 20px;
   position: absolute;

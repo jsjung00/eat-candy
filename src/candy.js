@@ -1,10 +1,18 @@
 import { v4 as uuidv4 } from "uuid";
-import { NUM_INIT_CANDIES } from "./params";
+import {
+  NUM_INIT_CANDIES,
+  NON_SELECTED_SHADOW,
+  SELECTED_SHADOW,
+  MAX_GRAVITY,
+  MIN_GRAVITY,
+  HARD_SCORE,
+} from "./params";
 let canvas, ctx, video, canvasWidth, canvasHeight;
 class Candies {
   constructor() {
     this.candies = [];
     this.missedCandyCount = 0;
+    this.score = 0;
     //initialize our canvas
     const video = document.querySelector("#videoElement");
     const videoWidth = video.videoWidth;
@@ -16,7 +24,6 @@ class Candies {
     canvas.height = videoHeight;
     this.canvas = canvas;
     this.ctx = this.canvas.getContext("2d");
-    this.ctx.shadowColor = "white";
     this.ctx.shadowBlur = 5;
   }
   async init() {
@@ -65,13 +72,25 @@ class Candies {
   }
   //simply creates candy without adding to the candy list
   createCandy() {
-    const gravity = this.getRandomFloat(1, 2.5, 1);
+    const mid_gravity_point =
+      MIN_GRAVITY +
+      0.1 +
+      (MAX_GRAVITY - 0.1) * Math.min(1, this.score / HARD_SCORE);
+    const gravity = this.getRandomFloat(
+      mid_gravity_point - 0.1,
+      mid_gravity_point + 0.1,
+      1
+    );
     const size = this.randomBtw(10, 20);
     const xStart = this.randomBtw(
       Math.floor(this.canvasWidth / 5) + size,
       this.canvasWidth - size - Math.floor(this.canvasWidth / 5)
     );
-    const yStart = this.randomBtw(size, this.canvasHeight / 3 - size);
+    const yStart = this.randomBtw(
+      this.canvasHeight / 5,
+      this.canvasHeight / 3 - size
+    );
+    //const yStart = this.randomBtw(size, this.canvasHeight / 3 - size);
     const rgb = this.randomRGB();
     const candy = new Candy(xStart, yStart, size, rgb, gravity);
     return candy;
@@ -87,14 +106,7 @@ class Candies {
   }
   //note: should be private. Candy class does not have access to this.candies
   removeCandy(candy) {
-    console.log("remove Candy input", candy);
-    console.log("this candies", this.candies);
-    console.log(
-      "filtered, ",
-      this.candies.filter((item) => item.id != candy.id)
-    );
     this.candies = this.candies.filter((item) => item.id != candy.id);
-    console.log("after", this.candies);
   }
   drawCandies() {
     this.ctx.clearRect(0, 0, this.canvasWidth, this.canvasHeight);
@@ -128,6 +140,9 @@ class Candy extends Candies {
     this.id = uuidv4();
     this.isSwallowed = false;
     this.swallowAnimationDone = false;
+    this.inMouth = false;
+    this.mouthOpenedTime;
+    this.highlighted = false;
   }
   draw() {
     //clear previous location
